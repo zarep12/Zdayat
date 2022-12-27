@@ -1,0 +1,161 @@
+#Installation of libraries
+!pip install tensorflow tensorflow-gpu opencv-python matplotlib
+
+from sklearn.metrics import accuracy_score
+from sklearn.metrics import recall_score
+from sklearn.metrics import precision_score
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix
+import itertools
+from skimage.filters.rank import median
+from skimage.morphology import disk
+from skimage import io
+from skimage.filters import unsharp_mask
+import matplotlib.pyplot as plt
+import numpy as np
+import cv2
+from PIL import Image
+from tensorflow.keras.utils import img_to_array, load_img
+import os
+import glob as gb
+from keras.preprocessing.image import ImageDataGenerator
+from tensorflow import keras
+import os 
+import numpy as np
+import shutil
+import tensorflow as tf
+import os
+import cv2
+import imghdr
+from matplotlib import pyplot as plt
+import numpy as py
+from skimage.io import imread,imsave
+import PIL
+from PIL import Image
+import pandas as pd
+import matplotlib.pyplot as plt
+from tensorflow.keras.utils import to_categorical
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Activation,Conv2D, MaxPooling2D, Dense, Flatten, Dropout 
+from tensorflow import keras
+from tensorflow.keras.constraints import MaxNorm
+from tensorflow.keras.optimizers import Adam 
+import skimage.io
+import numpy as np
+import pandas as pd
+import os
+import cv2
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split as pd
+
+#printing classes in folder
+data_dir = 'apple_fruit'
+for image_class in os.listdir(data_dir):
+    print(image_class)
+    
+#resize image
+f= r'apple_fruit'
+for file in os.listdir(f):
+    f_img = f+"/" +file
+    img=Image.open(f_img)
+    img=img.resize((100,100))
+    img.save(f_img)
+    print (img.size)
+   
+#Applying image enhancement    
+kernel = py.array([[0,-1,0],
+                   [-1,5,-1],
+                  [0,-1,0]]) #for sharpen image
+f = r'apple_fruit'
+for file in os.listdir(f):
+    for image in os.listdir(os.path.join(f,file)):
+        f_img = f+"/"+file+"/"+image
+        img=skimage.io.imread(f_img,0)
+        image_blur = cv2.medianBlur(img,1) #median_filter
+        unsharped_img = cv2.addWeighted(img, 1.5, image_blur, -0.15, 0) #unsharp mask
+        img = cv2.filter2D(unsharped_img, -1,kernel) #sharping image
+        img = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
+        cv2.imwrite(f_img,img)
+        
+#splitting dataset for testing and training      
+rootdir = r'apple_fruit'
+classes = ['braeburn','red_apples','red_delicious','rotten']
+for i in classes:
+    os.makedirs(rootdir+'/train/'+i)
+    os.makedirs(rootdir+'/test/'+i)
+    source = rootdir+'/'+i
+    allFileNames = os.listdir(source)
+    np.random.shuffle(allFileNames)
+    test_ratio = 0.2
+    train_FileNames, test_FileNames = np.split(np.array(allFileNames), [int(len(allFileNames)*(1-test_ratio))])
+    train_FileNames = [source+'/'+name for name in train_FileNames.tolist()]
+    test_FileNames = [source+'/'+name for name in test_FileNames.tolist()]
+    
+    for name in train_FileNames:
+        shutil.copy(name, rootdir+'/train/'+i)
+    for name in test_FileNames:
+        shutil.copy(name,rootdir+'/test/'+i)
+        
+# creating a list for dataset (image and label)
+train_path=r'apple_fruit'
+test_path=r'apple_fruit'
+
+x_train=[]
+
+for folder in os.listdir(train_path):
+
+    sub_path=train_path+"/"+folder
+
+    for img in os.listdir(sub_path):
+
+        image_path=sub_path+"/"+img
+
+        img_arr=cv2.imread(image_path)
+
+        img_arr=cv2.resize(img_arr,(100,100))
+
+        x_train.append(img_arr)
+
+x_test=[]
+
+for folder in os.listdir(test_path):
+
+    sub_path=test_path+"/"+folder
+
+    for img in os.listdir(sub_path):
+
+        image_path=sub_path+"/"+img
+
+        img_arr=cv2.imread(image_path)
+
+        img_arr=cv2.resize(img_arr,(100,100))
+        
+        x_test.append(img_arr)
+        
+train_x=np.array(x_train)
+test_x=np.array(x_test)
+
+#normalizing image
+train_x=train_x/255.0
+test_x=test_x/255.0
+
+train_datagen = ImageDataGenerator(rescale = 1./255,shear_range=0.2,
+                                   zoom_range=0.2,
+                                   horizontal_flip=True,
+                                   vertical_flip = True,
+                                   fill_mode='nearest')
+test_datagen = ImageDataGenerator(rescale = 1./255)
+val_datagen = ImageDataGenerator(rescale = 1./255)
+
+training_set = train_datagen.flow_from_directory(train_path,
+                                                 target_size = (100, 100),
+                                                 batch_size = 25,
+                                                 class_mode = 'sparse',shuffle=True)
+test_set = test_datagen.flow_from_directory(test_path,
+                                            target_size = (100, 100),
+                                            batch_size = 25,
+                                            class_mode = 'sparse',shuffle=True)
+train_y=training_set.classes
+test_y=test_set.classes
+
+
