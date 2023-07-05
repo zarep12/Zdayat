@@ -14,30 +14,4 @@ print(confusion_matrix(y_pred,test_y))
 print(classification_report(y_pred,test_y))
 
 
-#predict on one image
-image1 =cv2.imread("d_1_100.jpg")
-plt.imshow(image1)
-image_fromarray = Image.fromarray(image1,'RGB')
-resize_image = image_fromarray.resize((100, 100))
-expand_input = np.expand_dims(resize_image,axis=0)
-input_data = np.array(expand_input)
-input_data = input_data/255
 
-pred = loaded_model.predict(input_data)
-result = pred.argmax()
-result
-
-#converting model to .tflite for andorid studio
-from keras.models import load_model
-import tensorflow as tf 
-
-model = load_model("s.h5")
-
-converter = tf.lite.TFLiteConverter.from_keras_model(model)
-tflite_model = converter.convert()
-
-print("model converted")
-
-#save model
-with open('model.tflite','wb') as f:
-	f.write(tflite_model)
