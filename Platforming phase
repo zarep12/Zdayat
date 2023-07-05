@@ -1,127 +1,130 @@
-#Deployment in android studio
-package com.example.myapplication;
+//flask (app.py)
+from flask import Flask, render_template, request
+from keras.models import load_model
+from keras.preprocessing import image
+import cv2
+from tensorflow import keras
+import numpy as np
+from PIL import Image
+
+app = Flask(__name__,template_folder='templateFiles')
 
 
 
+dic = {0 : 'Ripe Braeburn', 1 : 'Ripe Red Apple', 2 : 'Ripe Red Delicious', 3 : 'Rotten'}
 
 
 
+def predict_label(img_path):
+    image = cv2.imread(img_path)
+    
+    
+   
 
 
-import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
-
-import android.content.Intent;
-import android.graphics.Bitmap;
-import android.net.Uri;
-import android.os.Bundle;
-import android.provider.MediaStore;
-import android.view.View;
-import android.widget.Button;
-import android.widget.ImageView;
-import android.widget.TextView;
-
-import com.example.myapplication.ml.Model;
-
-import org.tensorflow.lite.DataType;
-import org.tensorflow.lite.support.image.TensorImage;
-import org.tensorflow.lite.support.tensorbuffer.TensorBuffer;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
+    #make prediction
+    image_fromarray = Image.fromarray(image,'RGB')
+    resize_image = image_fromarray.resize((100, 100))
+    expand_input = np.expand_dims(resize_image,axis=0)
+    input_data = np.array(expand_input)
+    input_data = input_data/255
+    model = "Ripe2_model10.h5"
+    loaded_model = keras.models.load_model(model)
+    pred=loaded_model.predict(input_data)
+    result = pred.argmax()
+    if result == 0:
+        result = "Ripe Braeburn"
+    elif result==1:
+        result="Ripe Red Apple"
+    elif result == 2:
+        result = "Ripe Red Delicious"
+    elif result ==3:
+        result = "Rotten"
+    return result
 
 
-
-public class MainActivity extends AppCompatActivity {
-    public static final int REQ_CODE = 100;
-
-    private ImageView imgView;
-    private Button select, predict, clear;
-    private TextView tv;
-    private Bitmap  img;
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-
-        imgView = (ImageView) findViewById(R.id.imageView);
-        select = (Button) findViewById(R.id.button);
-        predict = (Button) findViewById(R.id.button2);
-        tv = (TextView) findViewById(R.id.textView);
-        clear = (Button) findViewById(R.id.button3);
-
-        select.setOnClickListener(new View.OnClickListener(){
-            @Override
-            public void onClick(View v){
-                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-                intent.setType("image/*");
-                startActivityForResult(intent, REQ_CODE);
-
-            }
-        });
-
-        
-        #Prediction from model that convert to .tflite
-        predict.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-
-                img = Bitmap.createScaledBitmap(img, 100, 100, true);
-
-                try {
-                    Model model = Model.newInstance(getApplicationContext());
-
-                    // Creates inputs for reference.
-                    TensorBuffer inputFeature0 = TensorBuffer.createFixedSize(new int[]{1, 100, 100, 3}, DataType.FLOAT32);
-
-                    TensorImage tensorImage = new TensorImage (DataType.FLOAT32);
-                    tensorImage.load(img);
-                    ByteBuffer byteBuffer = tensorImage.getBuffer();
+# routes
+@app.route("/", methods=['GET', 'POST'])
+def main():
+	return render_template("index.html")
 
 
-                    inputFeature0.loadBuffer(byteBuffer);
+@app.route("/submit", methods = ['GET', 'POST'])
+def get_output():
+	if request.method == 'POST':
+		img = request.files['my_image']
 
-                    // Runs model inference and gets result.
-                    Model.Outputs outputs = model.process(inputFeature0);
-                    TensorBuffer outputFeature0 = outputs.getOutputFeature0AsTensorBuffer();
-                   // TensorBuffer outputFeature1 = outputs.getOutputFeature0AsTensorBuffer();
-                    // Releases model resources if no longer used.
-                    model.close();
+		img_path =  "static/"+img.filename	
+		img.save(img_path)
 
-                    //tv.setText(""+outputFeature0);//
-                     tv.setText(outputFeature0.getFloatArray()[0] + "\n"+outputFeature0.getFloatArray()[1]+"\n"+outputFeature0.getFloatArray()[2]+"\n"+outputFeature0.getFloatArray()[3]);
-                } catch (IOException e) {
-                    // TODO Handle the exception
-                }
+		result = predict_label(img_path)
+
+	return render_template("index.html", prediction = result, img_path = img_path)
 
 
+if __name__ =='__main__':
+	#app.debug = True
+	app.run(debug = True)
 
 
-            }
-        });
-        clear.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                tv.setText("");
-            }
-        });
+//index.html
+<!DOCTYPE html>
+
+<html lang="en">
+  <style>
+    .container h1
+    {
+      font-family:monospace;
+      font-size: 40px;
     }
+    h2 { 
+      font-family: monospace;
+      font-size: 30px; } 
+  
+  </style>
+<head>
+  <title>Image Classification</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+</head>
+<body style = "background-color: bisque">
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data){
-        super.onActivityResult(requestCode,resultCode,data);
+<div class="container">
+  <h1 class="jumbotron bg-primary">Apple Ripeness Classification</h1>
+  <br><br>
+  <form class="form-horizontal" action="/submit" method="post" enctype="multipart/form-data">
 
-        if(requestCode == REQ_CODE)
-        {
-                imgView.setImageURI(data.getData());
-                Uri uri = data.getData();
-                try {
-                     img = MediaStore.Images.Media.getBitmap(this.getContentResolver(), uri);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+    <div class="form-group">
+      <label class="control-label col-sm-2" for="pwd">Upload Your Image :</label>
+      <div class="col-sm-7">          
+        <input type="file" class="form-control" placeholder="Hours Studied"  name="my_image" id="pwd">
+      </div>
+    </div>
 
-        }
-    }
-}
+    <div class="form-group">        
+      <div class="col-sm-offset-2 col-sm-10">
+        <button type="submit" class="btn btn-success">Submit</button>
+      </div>
+    </div>
+  </form>
+
+	{% if prediction %}
+ <center> <img src="{{img_path}}" height="150px" width="150px" >
+	<h2> Classification   : <i> {{prediction}} </i></h2></font></center>
+
+	{% endif %}
+
+</div>
+
+
+
+
+
+
+
+</body>
+</html>
